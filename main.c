@@ -73,12 +73,14 @@ void login(char filename[STRING_SIZE]){ // goto main menu, make key do something
 				flag=1; // exit loop if username does not match password
 		}
 		
-		if(nValid && count==3) // copy line_buffer to filename to use in main
+		if(nValid && count==3){ // copy line_buffer to filename to use in main
 			strcpy(filename, line_buffer);
-			
+			flag=1;
+		}
 		if(count==3) // reset count -> move to next user
 			count=0;
 	}
+	
 	
 	if(!nValid)
 		printf("Username/Password not found.\n");
@@ -212,7 +214,6 @@ void changePassword(char filename[STRING_SIZE]){
 	FILE *user_file, *temp;
 	user_file = fopen(filename, "r");
 	
-	
 	int valid_account_name=0, valid_password=0, line_number=0, count=0;
 	char new_password[STRING_SIZE], line_buffer[STRING_SIZE];
 	credentials user;
@@ -239,6 +240,7 @@ void changePassword(char filename[STRING_SIZE]){
 	}
 	fclose(user_file);
 	
+	count=0;
 	if(!valid_account_name || !valid_password)
 		printf("Invalid account name/password\n");
 	else{ // replace file with changed password instead of old
@@ -258,7 +260,91 @@ void changePassword(char filename[STRING_SIZE]){
 	}
 }
 
-void deletePassword(){
+void deletePassword(char filename[STRING_SIZE]){
+	FILE *user_file, *temp;
+	user_file = fopen(filename, "r");
+	
+	int valid_account_name=0, count=0, line_number=0;
+	char line_buffer[STRING_SIZE];
+	credentials user;
+	
+	printf("Enter account name: ");
+	fgets(user.account_name, STRING_SIZE, stdin);
+	
+	while(fgets(line_buffer, MAX_LINE, user_file) != NULL && !valid_account_name){
+		line_number++;
+		count++;
+		if(!valid_account_name && (count==1 && strcmp(user.account_name, line_buffer)==0)) // check for username
+			valid_account_name=1;
+			
+		if(count==3)
+			count=0;
+	}
+	fclose(user_file);
+	
+	count=0; // reset count
+	if(!valid_account_name)
+		printf("Invalid account name\n");
+	else{
+		user_file = fopen(filename, "r");
+		temp = fopen("temp", "w");
+
+		while(fgets(line_buffer, MAX_LINE, user_file) != NULL){
+				count++;
+				if(count < line_number || (line_number+2) < count) // delete account lines
+					fprintf(temp, "%s", line_buffer);
+				else;
+		}
+		
+		fclose(user_file);
+		fclose(temp);
+		remove(filename);
+		rename("temp", filename);
+	}
+}
+
+void changePasswordKeeper(){ // add user number
+	FILE *common, *temp;
+	common = fopen("common", "r");
+	
+	int valid_password=0, count=0, line_number=0;
+	char new_password[STRING_SIZE], line_buffer[STRING_SIZE];
+	credentials user;
+	
+	printf("Enter current password: ");
+	fgets(user.password, STRING_SIZE, stdin);
+	
+	while(fgets(line_buffer, MAX_LINE, common) != NULL && !valid_password){ //stop loop if user->password is valid
+		line_number++;
+		count++;
+		if(!valid_password && (count==2 && strcmp(user.password, line_buffer)==0)){ // check for username
+			valid_password=1;
+			printf("Enter new password: ");
+			fgets(new_password, STRING_SIZE, stdin);
+		}
+		if(count==3)
+			count=0;
+	}
+	count=0;
+	fclose(common);
+	
+	if(!valid_password)
+		printf("Invalid password\n");
+	else{ // replace file with changed password instead of old
+		common = fopen("common", "r");
+		temp = fopen("temp", "w");
+			while(fgets(line_buffer, MAX_LINE, common) != NULL){
+				count++;
+				if(line_number==count)
+					fprintf(temp, "%s", new_password);
+				else
+					fprintf(temp, "%s", line_buffer);
+			}
+			fclose(common);
+			fclose(temp);
+			remove("common");
+			rename("temp", "common");
+	}
 }
 
 void endScreen(){
@@ -285,8 +371,8 @@ int main(void){
 			newAccount(filename); // fix if wrong
 			break;
 	}
-	
 	while(nInput!=6){
+		
 		nInput = mainMenu(); // open main menu. return user input to nInput
 	
 		switch (nInput){ // main menu choices
@@ -303,6 +389,7 @@ int main(void){
 				deletePassword(filename);
 				break;
 			case 5:
+				changePasswordKeeper();
 				break;
 			case 6:
 				endScreen();
